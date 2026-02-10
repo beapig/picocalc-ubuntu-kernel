@@ -22,9 +22,9 @@
 	compatible = "rockchip,rk3506";
 
 	chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 storagemedia=sd root=/dev/mmcblk0p4 rootfstype=ext4 init=/sbin/pre_init rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+		bootargs = "cma=16M earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 storagemedia=sd root=/dev/mmcblk0p3 rootfstype=ext4 rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
 	};
-
+	
 	aliases {
 		/* ensure mount mmc first */
 		mmc0 = &mmc;
@@ -46,12 +46,12 @@
 		status = "okay";
 	};
 
-	mcu_log: mculog {
-		compatible = "picocalc,mculog";
-		memory-region = <&shmem_reserved>;
-		shmem-offset = <0x20>;
-		shmem-length = <0x7fe0>;
-	};
+	// mcu_log: mculog {
+	// 	compatible = "picocalc,mculog";
+	// 	memory-region = <&shmem_reserved>;
+	// 	shmem-offset = <0x20>;
+	// 	shmem-length = <0x7fe0>;
+	// };
 
 	fiq_debugger: fiq-debugger {
 		compatible = "rockchip,fiq-debugger";
@@ -70,12 +70,24 @@
 		};
 	};
 
-	softpwm_sound: softpwm-sound {
-		compatible = "picocalc,softpwm-sound";
-		memory-region = <&shmem_reserved>;
-		shmem-offset = <0>;
-		shmem-length = <0x20>;
+	// softpwm_sound: softpwm-sound {
+	// 	compatible = "picocalc,softpwm-sound";
+	// 	memory-region = <&shmem_reserved>;
+	// 	shmem-offset = <0>;
+	// 	shmem-length = <0x20>;
+	// 	status = "disabled";
+	// };
+
+	picocalc_snd {
+		compatible = "fsl,picocalc-snd-pwm";
 		status = "okay";
+		
+		pinctrl-names = "default";
+		pwm-names = "pwm-snd-left";
+        	//pwms = <&pwm0_4ch_0 2 25000 1>;
+		pwms = <&pwm0_4ch_2 0 25000 0>;
+		//leftpin = <&gpio4 RK_PB2 GPIO_ACTIVE_HIGH>;
+		/* rightpin = <&gpio4 RK_PB3 GPIO_ACTIVE_HIGH>; */
 	};
 
 	vcc_sys: vcc-sys {
@@ -139,7 +151,6 @@
 		pwm-supply = <&vcc_1v8>;
 	};
 };
-
 /**********cpu**********/
 &cpu0 {
 	cpu-supply = <&vdd_cpu>;
@@ -165,29 +176,22 @@
 };
 
 /**********reserved memory**********/
-&reserved_memory {
-	/* mcu address */
-	mcu_reserved: mcu@fff80000 {
-		reg = <0xfff80000 0xc000>;
-		no-map;
-	};
+// &reserved_memory {
+// 	/* mcu address */
+// 	mcu_reserved: mcu@fff80000 {
+// 		reg = <0xfff80000 0xc000>;
+// 		no-map;
+// 	};
 
 	/* 0x00~0x20 for PWM */
 	/* 0x20~0x8000 for log*/
-	shmem_reserved: shmem@3c00000 {
-		reg = <0x03c00000 0x8000>;
-		no-map;
-		no-cache;
-	};
-};
+	// shmem_reserved: shmem@3c00000 {
+	// 	reg = <0x03c00000 0x8000>;
+	// 	no-map;
+	// 	no-cache;
+	// };
+// };
 
-&drm_logo {
-	status = "disabled";
-};
-
-&cma {
-	status = "disabled";
-};
 
 /**********adc**********/
 &tsadc {
@@ -204,11 +208,21 @@
 	status = "okay";
 };
 
-&usb2phy {
+&usb20_otg1 {
+	dr_mode = "host";
 	status = "okay";
 };
 
+
 &u2phy_otg0 {
+	status = "okay";
+};
+
+&u2phy_otg1 {
+	status = "okay";
+};
+
+&usb2phy {
 	status = "okay";
 };
 
@@ -232,34 +246,53 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io4_spi0_csn0 &rm_io5_spi0_miso &rm_io6_spi0_mosi &rm_io7_spi0_clk>;
 	status = "okay";
+	
+	//dmas = <&dmac0 0>, <&dmac0 1>;
+    	//dma-names = "tx", "rx";
+    	
+    	//dmas = <&dmac0 16 0 0 0 0>,<&dmac0 17 0 0 0 0>;
+    	//dma-names = "tx", "rx";
+	
 	spi_lcd0: spi-lcd@0 {
+
 		compatible = "ilitek,ili9488";
 		reg = <0>;
-		spi-max-frequency = <80000000>;
+		spi-max-frequency = <70000000>;
 		pinctrl-names = "default";
-    	pinctrl-0 = <&lcd_pins>;
-        dc-gpios = <&gpio0 RK_PA3 GPIO_ACTIVE_HIGH>;
-        reset-gpios = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
-        rotate = <0>;
-        width = <320>;
-        height = <320>;
-        buswidth = <8>;
+		pinctrl-0 = <&lcd_pins>;
+		dc-gpios = <&gpio0 RK_PA3 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
+		
+		rotate = <0>; 
+		width = <320>;
+		height = <320>;
+		buswidth = <8>;
+		
+		memory-region = <&cma>;
 		status = "okay";
+		
+		//port {
+		//	panel_in_rgb: endpoint {
+		//		remote-endpoint = <&vop_out_rgb>;
+		//	};
+		//};
+		
+
 	};
 };
+
 
 &spi1 {
 	num-cs = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io28_spi1_mosi &rm_io29_spi1_clk &rm_io30_spi1_csn0 &rm_io31_spi1_miso>;
-	status = "okay";
+	status = "ok";
 	spi_sdcard0: spi-sdcard@0 {
 		compatible = "mmc-spi-slot";
         reg = <0>;
         spi-max-frequency = <50000000>;
         voltage-ranges = <3300 3300>;
         cd-gpios = <&gpio1 RK_PB2 GPIO_ACTIVE_LOW>;
-		status = "okay";
 	};
 };
 
@@ -271,17 +304,35 @@
 /**********pwm**********/
 &pwm0_4ch_0 {
 	pinctrl-names = "active";
-	pinctrl-0 = <&rm_io21_pwm0_ch0>;
+	//pinctrl-0 = <&rm_io21_pwm0_ch0>;
 	status = "okay";
 };
 
+&pwm0_4ch_2 {
+    status = "okay";
+    pinctrl-names = "active";
+    pinctrl-0 = <&rm_io12_pwm0_ch2>; 
+    
+    assigned-clocks = <&cru CLK_PWM0>;
+    assigned-clock-rates = <100000000>;
+};
+
+
 /**********display**********/
+&vop {
+	status = "okay";
+};
+
 &rga2 {
 	status = "okay";
 };
 
-&vop {
-	status = "okay";
+&drm_logo {
+	status = "disabled";
+};
+
+&cma {
+	status = "ok";
 };
 
 /**********pinctrl**********/
@@ -310,4 +361,6 @@
 				<0 RK_PA2 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
+
 };
+
