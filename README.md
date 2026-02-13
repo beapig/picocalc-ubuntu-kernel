@@ -4,6 +4,9 @@ Based on Luckfox_Lyra_SDK_250429
 
 Image and SDK [Download](https://mega.nz/folder/hn8iUDzY#Db-FwlFiGOg4CetCUm3r9Q)
 
+## Special Disclaimer
+The sole purpose of this repository is to build a development environment for the Linux kernel. It is specifically designed for Picocalc (configured with Luckfox Lyra) running a specific Ubuntu rootfs, and to provide the necessary environment for compiling drivers such as Wi-Fi. If you intend to use this for other purposes, you will need to handle any compatibility issues yourself.
+
 ## 1. Prepare SDK
 
 ### 1.1. SDK Environment Deployment
@@ -54,7 +57,7 @@ cd picocalc-ubuntu-kernel
 ## 2. Build
 
 ```shell
-./build.sh lunch
+./build.sh chip
 
 ############### Rockchip Linux SDK ###############
 
@@ -62,21 +65,21 @@ Manifest: luckfox_linux6.1_rk3506_release_v1.2_20250311.xml
 
 Log colors: message notice warning error fatal
 
-Log saved at /home/docker/luckfox/output/sessions/2025-05-15_22-41-24
+Log saved at /home/lyra/sdk-test/output/sessions/2026-02-14_00-32-43
+Switching to chip: rk3506
 Pick a defconfig:
 
 1. luckfox_lyra_buildroot_sdmmc_defconfig
 2. luckfox_lyra_buildroot_spinand_defconfig
 3. luckfox_lyra_plus_buildroot_sdmmc_defconfig
 4. luckfox_lyra_plus_buildroot_spinand_defconfig
-5. luckfox_lyra_plus_ubuntu_sdmmc_defconfig
-6. luckfox_lyra_ubuntu_sdmmc_defconfig
-7. luckfox_lyra_ultra-w_buildroot_emmc_defconfig
-8. luckfox_lyra_ultra-w_ubuntu_emmc_defconfig
-9. luckfox_lyra_ultra_buildroot_emmc_defconfig
-10. luckfox_lyra_ultra_ubuntu_emmc_defconfig
-11. picocalc_luckfox_lyra_buildroot_sdmmc_defconfig
-Which would you like? [1]:11
+5. luckfox_lyra_ultra-w_buildroot_emmc_defconfig
+6. luckfox_lyra_ultra_buildroot_emmc_defconfig
+7. picocalc_luckfox_lyra_buildroot_sdmmc_defconfig
+Which would you like? [1]: 7
+
 
 ./build.sh kernel
 ```
+# Important Note
+Based on my testing, if you are only compiling the kernel, the process may trigger an error during the final step. However, the compilation is actually successful. You can find the required output, "zboot.img", located in the %sdk-path/kernel-6.1/ directory.
