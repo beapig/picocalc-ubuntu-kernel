@@ -21,7 +21,7 @@ cd $SDK_DIR
 2. Clone
 
 ```shell
-git clone https://github.com/nekocharm/picocalc-luckfox-lyra.git
+git clone https://github.com/beapig/picocalc-ubuntu-kernel.git
 ```
 
 The SDK directory structure will be like
@@ -35,7 +35,7 @@ The SDK directory structure will be like
 ├── external --------------------- Contains third-party related repositories, including display, audio and video, cameras,networking, security, etc.
 ├── kernel -------------------------- Contains code for Kernel development
 ├── output -------------------------- Stores information on generated firmware, compilation information, XML files, host environment, etc.
-├── picocalc-luckfox-lyra------------ This repository
+├── picocalc-ubuntu-kernel------------ This repository
 ├── prebuilts ----------------------- Contains cross-compilation toolchains
 ├── rkbin --------------------------- Contains Rockchip-related binaries and tools
 ├── rockdev ------------------------- Stores compiled output firmware, actually a symlink to output/firmware 
@@ -47,7 +47,7 @@ The SDK directory structure will be like
 3. Prepare
 
 ```shell
-cd picocalc-luckfox-lyra
+cd picocalc-ubuntu-kernel
 ./prepare.sh
 ```
 
@@ -78,5 +78,5 @@ Pick a defconfig:
 11. picocalc_luckfox_lyra_buildroot_sdmmc_defconfig
 Which would you like? [1]:11
 
-./build.sh
+./build.sh kernel
 ```
