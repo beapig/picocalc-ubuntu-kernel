@@ -1,4 +1,7 @@
-# Picocalc Luckfox Lyra
+# Picocalc Luckfox Lyra ubuntu linux kernel building environment
+
+original repositories: (https://github.com/nekocharm/picocalc-luckfox-lyra)
+discussing post: (https://forum.clockworkpi.com/t/ubuntu-linux-on-picocalc-with-luckfox-lyra-sbc-tinkering-megathread/)
 
 Based on Luckfox_Lyra_SDK_250429
 
