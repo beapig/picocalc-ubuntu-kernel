@@ -3,9 +3,9 @@
 original repositories: (https://github.com/nekocharm/picocalc-luckfox-lyra)
 discussing post: (https://forum.clockworkpi.com/t/ubuntu-linux-on-picocalc-with-luckfox-lyra-sbc-tinkering-megathread/)
 
-Based on Luckfox_Lyra_SDK_250429
+### **[important!!]** Based on Luckfox_Lyra_SDK_250429
 
-Image and SDK [Download](https://mega.nz/folder/hn8iUDzY#Db-FwlFiGOg4CetCUm3r9Q)
+### Image and SDK [Download](https://mega.nz/folder/hn8iUDzY#Db-FwlFiGOg4CetCUm3r9Q)
 
 ## Special Disclaimer
 The sole purpose of this repository is to build a development environment for the Linux kernel. It is specifically designed for Picocalc (configured with Luckfox Lyra) running a specific Ubuntu rootfs, and to provide the necessary environment for compiling drivers such as Wi-Fi. If you intend to use this for other purposes, you will need to handle any compatibility issues yourself.
