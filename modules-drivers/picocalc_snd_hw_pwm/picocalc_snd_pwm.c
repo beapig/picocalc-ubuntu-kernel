@@ -68,12 +68,10 @@ struct picocalc_snd_dev {
 
 	unsigned int is_on;
 	struct pwm_device *pwm_left;
-	struct pwm_device *pwm_right;
 
     struct hrtimer tm1;
     ktime_t t1;
-    unsigned long duty_cycle_left_ns;
-	unsigned long duty_cycle_right_ns;
+    unsigned long duty_cycle_ns;
     unsigned long period_ns;
 };
 
@@ -99,28 +97,13 @@ enum hrtimer_restart cb1(struct hrtimer *t) {
     	data = picocalc->ss->runtime->dma_area;
     	buffer_size = picocalc->ss->runtime->buffer_size;
     	period_size = picocalc->ss->runtime->period_size;
-
-		// Check if we are at the end of the buffer
     	if (++picocalc->data_ptr >= buffer_size)
         {
             picocalc->data_ptr = 0;
         }
 
-		if (picocalc->ss->runtime->channels == 2) {
-			// Stereo: interleaved left/right samples        
-			picocalc->duty_cycle_left_ns  = (uint32_t)data[picocalc->data_ptr * 2]     * (uint32_t)DEFAULT_PWM_PERIOD / 255;
-			picocalc->duty_cycle_right_ns = (uint32_t)data[picocalc->data_ptr * 2 + 1] * (uint32_t)DEFAULT_PWM_PERIOD / 255;
-			
-			pwm_config(picocalc->pwm_left,  picocalc->duty_cycle_left_ns,  DEFAULT_PWM_PERIOD);
-			pwm_config(picocalc->pwm_right, picocalc->duty_cycle_right_ns, DEFAULT_PWM_PERIOD);
-		} else {
-			// Mono: same sample to both channels
-			picocalc->duty_cycle_left_ns = (uint32_t)data[picocalc->data_ptr] * (uint32_t)DEFAULT_PWM_PERIOD / 255;
-			picocalc->duty_cycle_right_ns = picocalc->duty_cycle_left_ns;
-			
-			pwm_config(picocalc->pwm_left,  picocalc->duty_cycle_left_ns,  DEFAULT_PWM_PERIOD);
-			pwm_config(picocalc->pwm_right, picocalc->duty_cycle_right_ns, DEFAULT_PWM_PERIOD);
-		}
+        picocalc->duty_cycle_ns = (uint32_t)data[picocalc->data_ptr]  * (uint32_t)DEFAULT_PWM_PERIOD / 255;
+        pwm_config(picocalc->pwm_left, picocalc->duty_cycle_ns, DEFAULT_PWM_PERIOD);
 
         if (++picocalc->period_ptr >= period_size) {
             picocalc->period_ptr = 0;
@@ -136,10 +119,8 @@ enum hrtimer_restart cb1(struct hrtimer *t) {
 
 static int picocalc_pwm_enable(struct picocalc_snd_dev *picocalc)
 {
-    pwm_config(picocalc->pwm_left,  picocalc->duty_cycle_left_ns,  DEFAULT_PWM_PERIOD);
+    pwm_config(picocalc->pwm_left, picocalc->duty_cycle_ns, DEFAULT_PWM_PERIOD);
     pwm_enable(picocalc->pwm_left);
-	pwm_config(picocalc->pwm_right, picocalc->duty_cycle_right_ns, DEFAULT_PWM_PERIOD);
-    pwm_enable(picocalc->pwm_right);
 
     hrtimer_init(&picocalc->tm1, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 
@@ -153,11 +134,7 @@ static int picocalc_pwm_enable(struct picocalc_snd_dev *picocalc)
 
 static void picocalc_pwm_disable(struct picocalc_snd_dev *picocalc)
 {
-    hrtimer_cancel(&picocalc->tm1);
-    pwm_config(picocalc->pwm_left,  DEFAULT_DUTY_CYCLE, DEFAULT_PWM_PERIOD);
-    pwm_disable(picocalc->pwm_left);
-    pwm_config(picocalc->pwm_right, DEFAULT_DUTY_CYCLE, DEFAULT_PWM_PERIOD);
-    pwm_disable(picocalc->pwm_right);
+    pwm_config(picocalc->pwm_left, DEFAULT_DUTY_CYCLE, DEFAULT_PWM_PERIOD);
 }
 
 /*
@@ -220,7 +197,7 @@ static const struct snd_pcm_hardware picocalc_playback_hw = {
 	.rate_min		= 8000,
 	.rate_max		= 8000,
 	.channels_min		= 1,
-	.channels_max		= 2,
+	.channels_max		= 1,
 	.buffer_bytes_max	= 8 * 1024,
 	.period_bytes_min	= 4,
 	.period_bytes_max	= 4 * 1024,
@@ -258,15 +235,7 @@ static int picocalc_pcm_trigger(struct snd_pcm_substream *ss, int cmd)
 	case SNDRV_PCM_TRIGGER_START:
 		{
 		    unsigned char *data = picocalc->ss->runtime->dma_area;
-		    if (picocalc->ss->runtime->channels == 2) {
-		        // Stereo: initialize with first left/right samples
-		        picocalc->duty_cycle_left_ns  = (uint32_t)data[0] * (uint32_t)DEFAULT_PWM_PERIOD / 255;
-		        picocalc->duty_cycle_right_ns = (uint32_t)data[1] * (uint32_t)DEFAULT_PWM_PERIOD / 255;
-		    } else {
-		        // Mono: same sample to both channels
-		        picocalc->duty_cycle_left_ns  = (uint32_t)data[0] * (uint32_t)DEFAULT_PWM_PERIOD / 255;
-		        picocalc->duty_cycle_right_ns = picocalc->duty_cycle_left_ns;
-		    }
+		    picocalc->duty_cycle_ns = (uint32_t)data[0] * (uint32_t)DEFAULT_PWM_PERIOD / 255; 
 		    picocalc->data_ptr = 0; 
 		    picocalc->period_ptr = 0; 
 		}
@@ -279,8 +248,7 @@ static int picocalc_pcm_trigger(struct snd_pcm_substream *ss, int cmd)
 		if (!picocalc->is_on)
 			break;
 		picocalc->is_on = 0;
-		picocalc->duty_cycle_left_ns  = 0;
-		picocalc->duty_cycle_right_ns = 0;
+		picocalc->duty_cycle_ns = 0;
 		break;
 	default:
 		ret = -EINVAL;
@@ -373,23 +341,18 @@ static int picocalc_probe(struct platform_device *pdev)
 	spin_lock_init(&picocalc->lock);
           
 
-    picocalc->duty_cycle_left_ns  = DEFAULT_DUTY_CYCLE;
-    picocalc->duty_cycle_right_ns = DEFAULT_DUTY_CYCLE;
+    picocalc->duty_cycle_ns = DEFAULT_DUTY_CYCLE;
     picocalc->period_ns = DEFAULT_PERIOD;
 
     picocalc->pwm_left = devm_pwm_get(&pdev->dev, "pwm-snd-left");
     if (IS_ERR(picocalc->pwm_left))
     {
-         printk(KERN_ERR" pwm_left, get pwm error!!\n");
-         return -1;
+         
+         printk(KERN_ERR "picocalc_snd: get pwm_left failed, error: %ld\n", PTR_ERR(picocalc->pwm_left));
+         return PTR_ERR(picocalc->pwm_left);
+         //printk(KERN_ERR" pwm_left,get pwm  error!!\n");
+         //return -1;
     }
-
-	picocalc->pwm_right = devm_pwm_get(&pdev->dev, "pwm-snd-right");
-	if (IS_ERR(picocalc->pwm_right))
-	{
-		 printk(KERN_ERR" pwm_right, get pwm error!!\n");
-		 return -1;
-	}
 
 /*
     pwm_config(picocalc->pwm_left, 1000000 / 2, 1000000); //1khz
