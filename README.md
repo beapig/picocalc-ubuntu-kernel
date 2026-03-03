@@ -1,5 +1,7 @@
 # Picocalc Luckfox Lyra
 
+original repo: [github.com/nekocharm/picocalc-luckfox-lyra](https://github.com/nekocharm/picocalc-luckfox-lyra.git)
+
 Based on Luckfox_Lyra_SDK_250429
 
 Image and SDK [Download](https://mega.nz/folder/hn8iUDzY#Db-FwlFiGOg4CetCUm3r9Q)
@@ -21,7 +23,7 @@ cd $SDK_DIR
 2. Clone
 
 ```shell
-git clone https://github.com/nekocharm/picocalc-luckfox-lyra.git
+git clone https://github.com/beapig/picocalc-ubuntu-kernel.git
 ```
 
 The SDK directory structure will be like
@@ -35,7 +37,7 @@ The SDK directory structure will be like
 ├── external --------------------- Contains third-party related repositories, including display, audio and video, cameras,networking, security, etc.
 ├── kernel -------------------------- Contains code for Kernel development
 ├── output -------------------------- Stores information on generated firmware, compilation information, XML files, host environment, etc.
-├── picocalc-luckfox-lyra------------ This repository
+├── picocalc-ubuntu-kernel------------ This repository
 ├── prebuilts ----------------------- Contains cross-compilation toolchains
 ├── rkbin --------------------------- Contains Rockchip-related binaries and tools
 ├── rockdev ------------------------- Stores compiled output firmware, actually a symlink to output/firmware 
@@ -47,14 +49,14 @@ The SDK directory structure will be like
 3. Prepare
 
 ```shell
-cd picocalc-luckfox-lyra
+cd picocalc-ubuntu-kernel
 ./prepare.sh
 ```
 
 ## 2. Build
 
 ```shell
-./build.sh lunch
+./build.sh chip
 
 ############### Rockchip Linux SDK ###############
 
@@ -62,21 +64,18 @@ Manifest: luckfox_linux6.1_rk3506_release_v1.2_20250311.xml
 
 Log colors: message notice warning error fatal
 
-Log saved at /home/docker/luckfox/output/sessions/2025-05-15_22-41-24
+Log saved at /home/lyra/sdk-test/output/sessions/2026-03-04_02-05-15
+Switching to chip: rk3506
 Pick a defconfig:
 
 1. luckfox_lyra_buildroot_sdmmc_defconfig
 2. luckfox_lyra_buildroot_spinand_defconfig
 3. luckfox_lyra_plus_buildroot_sdmmc_defconfig
 4. luckfox_lyra_plus_buildroot_spinand_defconfig
-5. luckfox_lyra_plus_ubuntu_sdmmc_defconfig
-6. luckfox_lyra_ubuntu_sdmmc_defconfig
-7. luckfox_lyra_ultra-w_buildroot_emmc_defconfig
-8. luckfox_lyra_ultra-w_ubuntu_emmc_defconfig
-9. luckfox_lyra_ultra_buildroot_emmc_defconfig
-10. luckfox_lyra_ultra_ubuntu_emmc_defconfig
-11. picocalc_luckfox_lyra_buildroot_sdmmc_defconfig
-Which would you like? [1]:11
+5. luckfox_lyra_ultra-w_buildroot_emmc_defconfig
+6. luckfox_lyra_ultra_buildroot_emmc_defconfig
+7. picocalc_luckfox_lyra_buildroot_sdmmc_defconfig
+Which would you like? [1]: 7
 
-./build.sh
+./build.sh kernel
 ```
