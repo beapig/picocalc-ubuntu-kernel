@@ -40,8 +40,15 @@ MODULE_AUTHOR("hiro <hiro@hiro.com>");
 */
 
 #define DEFAULT_DUTY_CYCLE 0
-#define DEFAULT_PERIOD (125000 / 1) //(NANO_SEC / 8000) // = 125000 // 0.125ms
-#define DEFAULT_PWM_PERIOD 15625 //(NANO_SEC / 64000)
+/* 16 kHz sample rate ==> 62 500 ns per sample */
+#define DEFAULT_PERIOD (62500) /* ns */
+
+/* PWM carrier settings tuned for 195 312 Hz (≈100 MHz/512).
+ * 512 ticks ⇒ 9‑bit resolution; period = 512 ticks × 10 ns/tick = 5120 ns. */
+#define PWM_TICKS           512
+#define DEFAULT_PWM_PERIOD  5120 /* ns */
+#define PWM_TICK_NS         (DEFAULT_PWM_PERIOD / PWM_TICKS)
+
 
 /*
 #define DEFAULT_DUTY_CYCLE 1500000 //1.5ms
@@ -93,16 +100,23 @@ enum hrtimer_restart cb1(struct hrtimer *t) {
 	unsigned int buffer_size;
 	unsigned int period_size;
 	unsigned int period_elapsed = 0;
+	unsigned int sample_idx;
 
     	data = picocalc->ss->runtime->dma_area;
     	buffer_size = picocalc->ss->runtime->buffer_size;
     	period_size = picocalc->ss->runtime->period_size;
-    	if (++picocalc->data_ptr >= buffer_size)
-        {
+    	if (++picocalc->data_ptr >= buffer_size) {
             picocalc->data_ptr = 0;
         }
 
-        picocalc->duty_cycle_ns = (uint32_t)data[picocalc->data_ptr]  * (uint32_t)DEFAULT_PWM_PERIOD / 255;
+        /* map 8‑bit sample (0..255) into 0..(PWM_TICKS‑1) range
+         * using 9‑bit effective resolution (×2). */
+        sample_idx = data[picocalc->data_ptr];
+        if (sample_idx > 255)
+            sample_idx = 255;
+        sample_idx <<= 1; /* multiply by two, gives 0..510 */
+
+        picocalc->duty_cycle_ns = sample_idx * PWM_TICK_NS;
         pwm_config(picocalc->pwm_left, picocalc->duty_cycle_ns, DEFAULT_PWM_PERIOD);
 
         if (++picocalc->period_ptr >= period_size) {
@@ -110,8 +124,8 @@ enum hrtimer_restart cb1(struct hrtimer *t) {
             period_elapsed = 1;
         }
 
-	if (period_elapsed)
-		snd_pcm_period_elapsed(picocalc->ss);
+	    if (period_elapsed)
+		    snd_pcm_period_elapsed(picocalc->ss);
     }
 
     return HRTIMER_RESTART;
@@ -193,9 +207,9 @@ static const struct snd_pcm_hardware picocalc_playback_hw = {
 				   SNDRV_PCM_INFO_INTERLEAVED |
 				   SNDRV_PCM_INFO_HALF_DUPLEX),
 	.formats		= SNDRV_PCM_FMTBIT_U8,
-	.rates			= SNDRV_PCM_RATE_8000,
-	.rate_min		= 8000,
-	.rate_max		= 8000,
+	.rates			= SNDRV_PCM_RATE_16000,
+	.rate_min		= 16000,
+	.rate_max		= 16000,
 	.channels_min		= 1,
 	.channels_max		= 1,
 	.buffer_bytes_max	= 8 * 1024,
@@ -235,9 +249,13 @@ static int picocalc_pcm_trigger(struct snd_pcm_substream *ss, int cmd)
 	case SNDRV_PCM_TRIGGER_START:
 		{
 		    unsigned char *data = picocalc->ss->runtime->dma_area;
-		    picocalc->duty_cycle_ns = (uint32_t)data[0] * (uint32_t)DEFAULT_PWM_PERIOD / 255; 
-		    picocalc->data_ptr = 0; 
-		    picocalc->period_ptr = 0; 
+		    unsigned int sample_idx = data[0];
+		    if (sample_idx > 255)
+		        sample_idx = 255;
+		    sample_idx <<= 1;
+		    picocalc->duty_cycle_ns = sample_idx * PWM_TICK_NS;
+		    picocalc->data_ptr = 0;
+		    picocalc->period_ptr = 0;
 		}
 		if (picocalc_pwm_enable(picocalc) == 0)
 			picocalc->is_on = 1;
