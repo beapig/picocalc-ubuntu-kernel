@@ -33,27 +33,17 @@ MODULE_AUTHOR("hiro <hiro@hiro.com>");
 
 #define MICRO_SEC 1000000
 #define NANO_SEC  (MICRO_SEC*1000)
-/*
-#define DEFAULT_DUTY_CYCLE 0
-#define DEFAULT_PERIOD (NANO_SEC / 10000) // = 125000 // 0.125ms
-#define DEFAULT_DUTY_CYCLE 0
-*/
 
 #define DEFAULT_DUTY_CYCLE 0
-/* 16 kHz sample rate ==> 62 500 ns per sample */
-#define DEFAULT_PERIOD (62500) /* ns */
+/* 22.05 kHz sample rate ==> 45 351 ns per sample */
+#define DEFAULT_PERIOD (45351) /* ns */
 
-/* PWM carrier settings tuned for 195 312 Hz (≈100 MHz/512).
- * 512 ticks ⇒ 9‑bit resolution; period = 512 ticks × 10 ns/tick = 5120 ns. */
-#define PWM_TICKS           512
-#define DEFAULT_PWM_PERIOD  5120 /* ns */
+/* PWM carrier: 2048 ticks ⇒ 11‑bit resolution.
+ * 100 MHz clock → 10 ns/tick → period = 2048 × 10 = 20480 ns (~48.8 kHz). */
+#define PWM_TICKS           2048
+#define DEFAULT_PWM_PERIOD  20480 /* ns */
 #define PWM_TICK_NS         (DEFAULT_PWM_PERIOD / PWM_TICKS)
 
-
-/*
-#define DEFAULT_DUTY_CYCLE 1500000 //1.5ms
-#define DEFAULT_PERIOD  20000000 // 20ms
-*/
 
 static const struct of_device_id picocalc_snd_pwm_dt_ids[] = {
 	{ .compatible = "fsl,picocalc-snd-pwm", },
@@ -96,28 +86,29 @@ enum hrtimer_restart cb1(struct hrtimer *t) {
     ovr = hrtimer_forward(t, now, picocalc->t1);
 
     {
-	unsigned char *data;
+	int16_t *data;
 	unsigned int buffer_size;
 	unsigned int period_size;
 	unsigned int period_elapsed = 0;
-	unsigned int sample_idx;
+	int16_t sample;
+	uint32_t pwm_val;
 
-    	data = picocalc->ss->runtime->dma_area;
+    	data = (int16_t *)picocalc->ss->runtime->dma_area;
     	buffer_size = picocalc->ss->runtime->buffer_size;
     	period_size = picocalc->ss->runtime->period_size;
-    	if (++picocalc->data_ptr >= buffer_size) {
+
+    	sample = data[picocalc->data_ptr];
+        /* S16_LE signed → unsigned 11‑bit (0…2047) via right‑shift by 5 */
+        pwm_val = ((uint32_t)(sample + 32768)) >> 5;
+        if (pwm_val > (PWM_TICKS - 1))
+            pwm_val = PWM_TICKS - 1;
+
+        picocalc->duty_cycle_ns = pwm_val * PWM_TICK_NS;
+        pwm_config(picocalc->pwm_left, picocalc->duty_cycle_ns, DEFAULT_PWM_PERIOD);
+
+        if (++picocalc->data_ptr >= buffer_size) {
             picocalc->data_ptr = 0;
         }
-
-        /* map 8‑bit sample (0..255) into 0..(PWM_TICKS‑1) range
-         * using 9‑bit effective resolution (×2). */
-        sample_idx = data[picocalc->data_ptr];
-        if (sample_idx > 255)
-            sample_idx = 255;
-        sample_idx <<= 1; /* multiply by two, gives 0..510 */
-
-        picocalc->duty_cycle_ns = sample_idx * PWM_TICK_NS;
-        pwm_config(picocalc->pwm_left, picocalc->duty_cycle_ns, DEFAULT_PWM_PERIOD);
 
         if (++picocalc->period_ptr >= period_size) {
             picocalc->period_ptr = 0;
@@ -151,42 +142,6 @@ static void picocalc_pwm_disable(struct picocalc_snd_dev *picocalc)
     pwm_config(picocalc->pwm_left, DEFAULT_DUTY_CYCLE, DEFAULT_PWM_PERIOD);
 }
 
-/*
-static irqreturn_t picocalc_irq_handler(int irq, void *dev_id)
-{
-	struct picocalc_snd_dev *picocalc = dev_id;
-	unsigned int period_elapsed = 0;
-	unsigned long flags;
-
-	spin_lock_irqsave(&picocalc->lock, flags);
-	if (picocalc->is_on) {
-		unsigned char *data = picocalc->ss->runtime->dma_area;
-		unsigned int buffer_size = picocalc->ss->runtime->buffer_size;
-		unsigned int period_size = picocalc->ss->runtime->period_size;
-		int i = 0;
-
-		for (i = 0; i < 3; i++) {
-			if (++picocalc->data_ptr >= buffer_size)
-				picocalc->data_ptr = 0;
-			writel(data[picocalc->data_ptr], picocalc->mmio_base + MX3_PWMSAR);
-
-			if (++picocalc->period_ptr >= period_size) {
-				picocalc->period_ptr = 0;
-				period_elapsed = 1;
-			}
-		}
-		writel(readl(picocalc->mmio_base + MX3_PWMSR),
-			picocalc->mmio_base + MX3_PWMSR);
-	}
-	spin_unlock_irqrestore(&picocalc->lock, flags);
-
-	if (period_elapsed)
-		snd_pcm_period_elapsed(picocalc->ss);
-
-	return IRQ_HANDLED;
-}
-*/
-
 /**
  * PCM Interface
  */
@@ -206,17 +161,17 @@ static const struct snd_pcm_hardware picocalc_playback_hw = {
 				   SNDRV_PCM_INFO_MMAP_VALID |
 				   SNDRV_PCM_INFO_INTERLEAVED |
 				   SNDRV_PCM_INFO_HALF_DUPLEX),
-	.formats		= SNDRV_PCM_FMTBIT_U8,
-	.rates			= SNDRV_PCM_RATE_16000,
-	.rate_min		= 16000,
-	.rate_max		= 16000,
+	.formats		= SNDRV_PCM_FMTBIT_S16_LE,
+	.rates			= SNDRV_PCM_RATE_22050,
+	.rate_min		= 22050,
+	.rate_max		= 22050,
 	.channels_min		= 1,
 	.channels_max		= 1,
-	.buffer_bytes_max	= 8 * 1024,
-	.period_bytes_min	= 4,
-	.period_bytes_max	= 4 * 1024,
+	.buffer_bytes_max	= 16 * 1024,
+	.period_bytes_min	= 16,
+	.period_bytes_max	= 8 * 1024,
 	.periods_min		= 4,
-	.periods_max		= 1024, 
+	.periods_max		= 1024,
 };
 
 static int picocalc_pcm_open(struct snd_pcm_substream *ss)
@@ -248,12 +203,11 @@ static int picocalc_pcm_trigger(struct snd_pcm_substream *ss, int cmd)
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		{
-		    unsigned char *data = picocalc->ss->runtime->dma_area;
-		    unsigned int sample_idx = data[0];
-		    if (sample_idx > 255)
-		        sample_idx = 255;
-		    sample_idx <<= 1;
-		    picocalc->duty_cycle_ns = sample_idx * PWM_TICK_NS;
+		    int16_t *data = (int16_t *)picocalc->ss->runtime->dma_area;
+		    uint32_t pwm_val = ((uint32_t)(data[0] + 32768)) >> 5;
+		    if (pwm_val > (PWM_TICKS - 1))
+		        pwm_val = PWM_TICKS - 1;
+		    picocalc->duty_cycle_ns = pwm_val * PWM_TICK_NS;
 		    picocalc->data_ptr = 0;
 		    picocalc->period_ptr = 0;
 		}
@@ -328,7 +282,7 @@ static int picocalc_snd_register(struct picocalc_snd_dev *picocalc)
 	snd_pcm_lib_preallocate_pages_for_all(pcm,
 				SNDRV_DMA_TYPE_CONTINUOUS,
 				&picocalc->pdev->dev,
-				8 * 1024, 8 * 1024);
+				16 * 1024, 16 * 1024);
 	/*
 	if (ret < 0)
 		goto snd_error;
@@ -380,12 +334,6 @@ static int picocalc_probe(struct platform_device *pdev)
     pwm_disable(picocalc->pwm_left);
 */
 
-    if (0 != picocalc_pwm_enable(picocalc))
-    {
-	ret = -EIO;
-        dev_err(&picocalc->pdev->dev, "picocalc_pwm_enable failed!\n");
-
-    }
     
 	platform_set_drvdata(pdev, picocalc);
 	//return 0;
