@@ -79,3 +79,11 @@ Which would you like? [1]: 7
 
 ./build.sh kernel
 ```
+
+## After build success
+the standard Luckfox SDK full build links and renames all outputs to `$SDKroot/output`.
+
+However, since this project only compiles the kernel, it skips that step. Do not be misled by `boot.img` inside `$SDKroot/kernel6.1/`; it is **incorrect**. 
+
+**The actual kernel image you need is `$SDKroot/kernel6.1/zboot.img`**.
+
