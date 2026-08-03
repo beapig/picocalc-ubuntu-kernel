@@ -288,34 +288,34 @@ R-shift 按住时，每个物理键属于以下三类之一：
 
 ### 5.1 新增功能
 
-| 功能 | 说明 |
-|------|------|
-| `REG_ID_CFG` 读写 | 驱动可在运行时通过 I2C 读写 CFG 寄存器，动态配置固件行为 |
-| `CFG_USE_MODS=0` 支持 | 关闭固件内部的 shift/ctrl/alt/capslock 状态机，固件发送原始 scancode，修饰键不再改变按键输出 |
-| `CFG_REPORT_MODS` | 修饰键（L-shift/R-shift/Alt/Ctrl）以独立 scancode 上报（0xA1-0xA5），驱动自行处理 |
-| `REG_ID_LED` (0x0F) | 驱动可直接控制绿色 LED（PC13）和橙色充电 LED，固件不再自动管理（当 `LED_DRIVER_CTRL` 置位时） |
-| `REG_ID_OFF` (0x0E) | 软关机寄存器，写入后 MCU 关闭背光和 SoC 供电，延迟 6 秒后执行 `PMU.shutdown()` 彻底断电 |
-| `BIOSVERSION` 版本检测 | 驱动通过 `REG_ID_VER` 读取版本号，`>= 0x20` 时启用新特性 |
-| I2C 总线看门狗 | 检测 I2C 总线死锁（SDA 被拉低），自动发送时钟脉冲恢复 |
+| 功能                   | 说明                                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| `REG_ID_CFG` 读写      | 驱动可在运行时通过 I2C 读写 CFG 寄存器，动态配置固件行为                                      |
+| `CFG_USE_MODS=0` 支持  | 关闭固件内部的 shift/ctrl/alt/capslock 状态机，固件发送原始 scancode，修饰键不再改变按键输出  |
+| `CFG_REPORT_MODS`      | 修饰键（L-shift/R-shift/Alt/Ctrl）以独立 scancode 上报（0xA1-0xA5），驱动自行处理             |
+| `REG_ID_LED` (0x0F)    | 驱动可直接控制绿色 LED（PC13）和橙色充电 LED，固件不再自动管理（当 `LED_DRIVER_CTRL` 置位时） |
+| `REG_ID_OFF` (0x0E)    | 软关机寄存器，写入后 MCU 关闭背光和 SoC 供电，延迟 6 秒后执行 `PMU.shutdown()` 彻底断电       |
+| `BIOSVERSION` 版本检测 | 驱动通过 `REG_ID_VER` 读取版本号，`>= 0x20` 时启用新特性                                      |
+| I2C 总线看门狗         | 检测 I2C 总线死锁（SDA 被拉低），自动发送时钟脉冲恢复                                         |
 
 ### 5.2 寄存器定义
 
-| 寄存器 | 地址 | 说明 |
-|--------|------|------|
-| REG_ID_VER | 0x01 | 固件版本（当前 0x20） |
-| REG_ID_CFG | 0x02 | 配置寄存器（bit7=CFG_USE_MODS, bit6=CFG_REPORT_MODS） |
-| REG_ID_KEY | 0x04 | 按键状态 |
-| REG_ID_BKL | 0x05 | 屏幕背光亮度（0-16） |
-| REG_ID_BK2 | 0x0A | 键盘背光亮度（0-32） |
-| REG_ID_OFF | 0x0E | 软关机（写入即触发） |
+| 寄存器     | 地址 | 说明                                                          |
+| ---------- | ---- | ------------------------------------------------------------- |
+| REG_ID_VER | 0x01 | 固件版本（当前 0x20）                                         |
+| REG_ID_CFG | 0x02 | 配置寄存器（bit7=CFG_USE_MODS, bit6=CFG_REPORT_MODS）         |
+| REG_ID_KEY | 0x04 | 按键状态                                                      |
+| REG_ID_BKL | 0x05 | 屏幕背光亮度（0-16）                                          |
+| REG_ID_BK2 | 0x0A | 键盘背光亮度（0-32）                                          |
+| REG_ID_OFF | 0x0E | 软关机（写入即触发）                                          |
 | REG_ID_LED | 0x0F | LED 控制（bit7=driver接管, bit0=绿色LED, bit3:1=橙色LED模式） |
 
 ### 5.3 固件文件
 
-| 文件 | 说明 |
-|------|------|
-| `picocalc_keyboard_stm/` | 固件源码（Arduino/STM32duino） |
-| `picocalc_keyboard_v2.0.bin` | 编译好的固件（40948 bytes） |
+| 文件                         | 说明                           |
+| ---------------------------- | ------------------------------ |
+| `picocalc_keyboard_stm/`     | 固件源码（Arduino/STM32duino） |
+| `picocalc_keyboard_v2.0.bin` | 编译好的固件（40948 bytes）    |
 
 ---
 
