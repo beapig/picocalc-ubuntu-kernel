@@ -212,7 +212,6 @@ static const struct fn_keymap fn_key_table[] = {
 	{ PK_UP, KEY_PAGEUP }, { PK_DOWN, KEY_PAGEDOWN },
 	{ PK_LEFT, KEY_HOME }, { PK_RIGHT, KEY_END },
 	{ PK_I, KEY_INSERT },
-	{ PK_GRAVE, KEY_PAGEUP }, { PK_SLASH, KEY_PAGEDOWN },
 };
 
 #define FN_KEY_TABLE_SIZE (sizeof(fn_key_table) / sizeof(fn_key_table[0]))
